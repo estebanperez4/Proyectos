@@ -13,6 +13,11 @@ Abrí `index.html` en cualquier navegador moderno. No necesita servidor ni insta
 | Frenar | ↓ / S | ▼ (mantener) |
 | Pausa | P / Esc | botón II |
 | Sonido | M | — |
+| Música | N | botón en la pausa |
+
+## Música
+
+Composición original generada en vivo con WebAudio (no hay archivos de audio, suma unos 5 KB). Está inspirada en el punto guanacasteco: marimba en 6/8 alternando 3+3 y 2+2+2 (sesquiáltera) sobre I–IV–V7 en sol mayor, con una base de beat que se va armando por fase: marimba y bajo, luego maraca y acordes, después bombo y palmas, hi-hat, y en el Infierno de Presa más rápido y con el bajo saltando de octava.
 
 ## Puntuación
 
@@ -55,4 +60,4 @@ Huecos (frenan y quitan el combo), zaguate cruzando, "¡Milagro! se abrió la pr
 ## Compartir
 
 - **En línea (GitHub Pages):** https://estebanperez4.github.io/Proyectos/presas-cr/ (cuando Pages esté activado en la rama `main`).
-- **Un solo archivo:** `presas-cr-un-archivo.html` trae todo el juego adentro (unos 94 KB). Se puede mandar por correo o WhatsApp y abrir en cualquier navegador sin internet.
+- **Un solo archivo:** `presas-cr-un-archivo.html` trae todo el juego adentro (unos 100 KB). Se puede mandar por correo o WhatsApp y abrir en cualquier navegador sin internet.

@@ -167,6 +167,135 @@
   };
 
   // =================================================================
+  //  MÚSICA: composición original al estilo del punto guanacasteco
+  //  (marimba en 6/8 con sesquiáltera 3+3 / 2+2+2) sobre una base de beat.
+  //  Se genera en vivo con WebAudio: no hay archivos de audio.
+  // =================================================================
+  const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+  // 8 compases de 6 corcheas. Compases pares: 3+3, impares: 2+2+2.
+  const SONG = {
+    chords: ['G', 'C', 'D7', 'G', 'G', 'C', 'D7', 'G'],
+    bass: { G: [43, 50], C: [48, 55], D7: [50, 45] },          // raíz, quinta
+    stab: { G: [67, 71, 74], C: [67, 72, 76], D7: [66, 69, 72] },
+    melody: [
+      [67, 71, 74, 71, 74, 79],
+      [76, null, 72, null, 79, null],
+      [78, 76, 74, 72, 74, 78],
+      [79, null, 74, null, 71, null],
+      [74, 76, 78, 79, null, 74],
+      [76, 79, 76, 72, null, 76],
+      [74, 72, 69, 66, 69, 72],
+      [71, null, 67, null, null, null],
+    ],
+  };
+  const TEMPO = [92, 98, 104, 112, 120];                       // negras con puntillo por minuto
+
+  const Music = {
+    on: store.get('presascr_music', true),
+    playing: false, level: 0, step: 0, nextT: 0, timer: null, bus: null, noiseBuf: null,
+    target() { return Sound.muted || !this.on ? 0.0001 : 0.32; },
+    start() {
+      const ac = Sound.ac;
+      if (!ac || this.playing) return;
+      if (!this.noiseBuf) {
+        const n = ac.sampleRate * 0.3;
+        this.noiseBuf = ac.createBuffer(1, n, ac.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      }
+      this.bus = ac.createGain();
+      this.bus.gain.setValueAtTime(0.0001, ac.currentTime);
+      this.bus.gain.exponentialRampToValueAtTime(this.target(), ac.currentTime + 0.8);
+      this.bus.connect(ac.destination);
+      this.playing = true; this.step = 0; this.nextT = ac.currentTime + 0.1;
+      this.timer = setInterval(() => this.tick(), 25);
+    },
+    stop(fade = 0.4) {
+      if (!this.playing) return;
+      const ac = Sound.ac, b = this.bus;
+      b.gain.cancelScheduledValues(ac.currentTime);
+      b.gain.setValueAtTime(Math.max(0.0001, b.gain.value), ac.currentTime);
+      b.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + fade);
+      setTimeout(() => b.disconnect(), fade * 1000 + 200);
+      clearInterval(this.timer);
+      this.playing = false;
+    },
+    refresh() {
+      if (!this.playing) return;
+      const ac = Sound.ac;
+      this.bus.gain.cancelScheduledValues(ac.currentTime);
+      this.bus.gain.setTargetAtTime(this.target(), ac.currentTime, 0.1);
+    },
+    toggle() { this.on = !this.on; store.set('presascr_music', this.on); this.refresh(); },
+    tick() {
+      const ac = Sound.ac;
+      const dur = 60 / TEMPO[clamp(this.level, 0, 4)] / 3;     // una corchea
+      while (this.nextT < ac.currentTime + 0.15) {
+        this.play(this.step, this.nextT, dur);
+        this.nextT += dur;
+        this.step++;
+      }
+    },
+    play(step, t, dur) {
+      const L = this.level;
+      const bar = Math.floor(step / 6) % 8, s = step % 6;
+      const three = bar % 2 === 0;                               // 3+3 o 2+2+2
+      const groupStart = three ? s % 3 === 0 : s % 2 === 0;
+      const ch = SONG.chords[bar];
+      // marimba
+      const m = SONG.melody[bar][s];
+      if (m) this.mallet(m, t, 0.5, three ? 0.5 : 0.7);
+      if (L >= 3 && m && groupStart) this.mallet(m - 12, t, 0.22, 0.4);
+      // acordes de marimba en contratiempo desde la fase 2
+      if (L >= 1 && !groupStart && s % 2 === 1) for (const n of SONG.stab[ch]) this.mallet(n, t, 0.09, 0.18);
+      // bajo
+      const bs = SONG.bass[ch];
+      if (three ? s === 0 || s === 3 : s % 2 === 0) {
+        let n = three ? (s === 0 ? bs[0] : bs[1]) : (s === 2 ? bs[1] : bs[0]);
+        if (L >= 4 && s !== 0) n += 12;
+        this.bass(n, t, dur * (three ? 2.6 : 1.8));
+      }
+      // percusión: crece con la fase
+      if (L >= 1) this.noise(t, s === 0 || groupStart ? 0.07 : 0.04, 0.035, 'highpass', 7000);          // maraca
+      if (L >= 2 && groupStart) this.kick(t, s === 0 ? 0.9 : 0.6);
+      if (L >= 2 && (three ? s === 3 : s === 4)) this.noise(t, 0.28, 0.1, 'bandpass', 1600);           // palmada
+      if (L >= 3) this.noise(t + dur / 2, 0.035, 0.02, 'highpass', 9000);                              // hi-hat
+      if (L >= 4 && s === 5) this.kick(t + dur / 2, 0.5);
+    },
+    mallet(m, t, vol, len) {
+      const ac = Sound.ac, f = mf(m);
+      for (const [mul, v, d] of [[1, vol, len], [3.93, vol * 0.18, 0.06]]) {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'sine'; o.frequency.value = f * mul;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(v, t + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        o.connect(g).connect(this.bus); o.start(t); o.stop(t + d + 0.02);
+      }
+    },
+    bass(m, t, len) {
+      const ac = Sound.ac, o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = mf(m);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.55, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(this.bus); o.start(t); o.stop(t + len + 0.02);
+    },
+    kick(t, vol) {
+      const ac = Sound.ac, o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(g).connect(this.bus); o.start(t); o.stop(t + 0.2);
+    },
+    noise(t, vol, len, type, freq) {
+      const ac = Sound.ac, src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = this.noiseBuf; f.type = type; f.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      src.connect(f).connect(g).connect(this.bus); src.start(t, Math.random() * 0.2); src.stop(t + len + 0.02);
+    },
+  };
+
+  // =================================================================
   //  CANVAS / ESCALADO
   // =================================================================
   const stage = document.getElementById('stage');
@@ -876,6 +1005,7 @@
     G.crashT = 1.4; G.shake = 22; G.cause = e;
     player.vx = (player.x < e.x ? -1 : 1) * 160;
     Sound.crash();
+    Music.stop(0.25);
     burst(player.x, player.y + 20, '#ffcc00', 30);
     burst(player.x, player.y + 20, '#ff5a1f', 24);
     smoke(player.x, player.y + 20, 14);
@@ -979,6 +1109,7 @@
       const pi = phaseFor(G.dist);
       if (pi !== G.phaseIdx) {
         G.phaseIdx = pi;
+        Music.level = pi;
         showBanner(`FASE ${pi + 1}`, PHASES[pi].name, 2.8, '#ffcc00');
         Sound.phase();
         G.eventT = Math.min(G.eventT, 6);
@@ -1612,15 +1743,17 @@
     Sound.init();
     newGame();
     state = 'playing';
+    Music.stop(0.05); Music.level = G.phaseIdx; Music.start();
     showOverlay(null);
     $('pauseBtn').classList.add('show');
     input.up = input.down = false;
   }
   function togglePause() {
-    if (state === 'playing') { state = 'paused'; showOverlay('pause'); }
-    else if (state === 'paused') { state = 'playing'; showOverlay(null); last = performance.now(); }
+    if (state === 'playing') { state = 'paused'; showOverlay('pause'); Music.stop(0.2); }
+    else if (state === 'paused') { state = 'playing'; showOverlay(null); last = performance.now(); Music.start(); }
   }
   function toMenu() {
+    Music.stop(0.3);
     state = 'title'; G = null; ents = []; showOverlay('title'); $('pauseBtn').classList.remove('show'); updateBestTitle();
   }
   function gameOver() {
@@ -1654,7 +1787,8 @@
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', ' '].includes(k)) e.preventDefault();
-    if (k === 'm') { Sound.muted = !Sound.muted; store.set('presascr_mute', Sound.muted); return; }
+    if (k === 'm') { Sound.muted = !Sound.muted; store.set('presascr_mute', Sound.muted); Music.refresh(); return; }
+    if (k === 'n') { Music.toggle(); syncMusicBtn(); return; }
     if (state === 'title' || state === 'over') {
       if ((k === 'enter' || k === ' ') && !e.repeat) startGame();
       return;
@@ -1678,6 +1812,10 @@
   document.querySelectorAll('[data-resume]').forEach(b => b.addEventListener('click', togglePause));
   document.querySelectorAll('[data-quit]').forEach(b => b.addEventListener('click', toMenu));
   $('pauseBtn').addEventListener('click', togglePause);
+  const musicBtn = $('musicBtn');
+  const syncMusicBtn = () => { musicBtn.textContent = `Música: ${Music.on ? 'sí' : 'no'}`; };
+  musicBtn.addEventListener('click', () => { Music.toggle(); syncMusicBtn(); });
+  syncMusicBtn();
 
   // táctil: botones
   const touchEl = $('touch');
