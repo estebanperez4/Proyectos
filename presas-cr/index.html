@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1b2a">
+  <title>PRESAS CR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="480" height="800"></canvas>
+
+    <button id="pauseBtn" class="pause-btn" aria-label="Pausa">II</button>
+
+    <div id="touch" class="touch" aria-hidden="true">
+      <div class="pad pad-left">
+        <button data-act="left">◀</button>
+        <button data-act="right">▶</button>
+      </div>
+      <div class="pad pad-right">
+        <button data-act="up">▲</button>
+        <button data-act="down">▼</button>
+      </div>
+    </div>
+
+    <!-- Pantalla de título -->
+    <div id="title" class="overlay show">
+      <div class="panel">
+        <h1 class="logo"><span class="l1">PRESAS</span><span class="l2">CR</span></h1>
+        <div class="flag"><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="tag">Sobreviví la presa. Esquivá las motos.<br>Llegá… algún día.</p>
+        <button class="big" data-start>¡JALE!</button>
+        <p class="hint">Enter / Espacio para empezar</p>
+
+        <div class="cols">
+          <div class="box">
+            <h3>Controles</h3>
+            <ul class="keys">
+              <li><b>← →</b> / <b>A D</b> cambiar de carril</li>
+              <li><b>↑</b> / <b>W</b> meterle</li>
+              <li><b>↓</b> / <b>S</b> frenar</li>
+              <li><b>P</b> pausa · <b>M</b> sonido</li>
+              <li>Táctil: botones o deslizar</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>Motos (por casco)</h3>
+            <ul class="legend">
+              <li><i style="background:#f1f1f1"></i>Normal</li>
+              <li><i style="background:#ffd500"></i>Filtradora</li>
+              <li><i style="background:#b84dff"></i>Zigzag</li>
+              <li><i style="background:#00e5ff"></i>Rápida (por detrás)</li>
+              <li><i style="background:#ff8c1a"></i>Oportunista</li>
+              <li><i style="background:#ff1f3d"></i>Kamikaze</li>
+            </ul>
+          </div>
+        </div>
+        <p class="tips">Pasá cerca de los carros sin chocar para subir el <b>combo</b>.
+          Agarrá <b>₡</b>, <b>cafecito</b> (cámara lenta) y <b>Pura Vida</b> (escudo).</p>
+        <p class="best" id="bestTitle"></p>
+      </div>
+    </div>
+
+    <!-- Pausa -->
+    <div id="pause" class="overlay">
+      <div class="panel small">
+        <h2>PAUSA</h2>
+        <p class="tag">La presa te espera…</p>
+        <button class="big" data-resume>SEGUIR</button>
+        <button class="ghost" data-quit>Salir al menú</button>
+      </div>
+    </div>
+
+    <!-- Fin de partida -->
+    <div id="over" class="overlay">
+      <div class="panel">
+        <h2 class="crash">¡CHOCASTE!</h2>
+        <p class="cause" id="cause"></p>
+        <div class="record" id="record">¡NUEVO RÉCORD!</div>
+        <div class="stats" id="stats"></div>
+        <button class="big" data-start>OTRA VEZ</button>
+        <p class="hint">Enter / Espacio para reintentar</p>
+        <button class="ghost" data-quit>Menú</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
