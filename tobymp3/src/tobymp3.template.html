@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOBYMP3</title>
+<meta name="description" content="TOBYMP3 — conversor portable de audio a MP3 con compresión. Todo ocurre en tu navegador, sin subir archivos.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cpath d='M30 62 L12 10 Q10 4 16 7 L58 34 Z' fill='%23c98a4b'/%3E%3Cpath d='M98 62 L116 10 Q118 4 112 7 L70 34 Z' fill='%23c98a4b'/%3E%3Cpath d='M32 52 L20 18 L50 37 Z' fill='%23f2a7a0'/%3E%3Cpath d='M96 52 L108 18 L78 37 Z' fill='%23f2a7a0'/%3E%3Cellipse cx='64' cy='70' rx='42' ry='38' fill='%23d9a066'/%3E%3Cellipse cx='64' cy='92' rx='22' ry='16' fill='%23f6dcb5'/%3E%3Ccircle cx='45' cy='66' r='11' fill='%232b1d14'/%3E%3Ccircle cx='83' cy='66' r='11' fill='%232b1d14'/%3E%3Ccircle cx='49' cy='62' r='3.5' fill='%23fff'/%3E%3Ccircle cx='87' cy='62' r='3.5' fill='%23fff'/%3E%3Cpath d='M57 84 Q64 79 71 84 Q68 91 64 91 Q60 91 57 84 Z' fill='%232b1d14'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #fbf6ef;
+    --bg-2: #f3e9da;
+    --card: #ffffff;
+    --text: #2b1d14;
+    --muted: #7a6656;
+    --line: #e7d9c6;
+    --accent: #c9762f;
+    --accent-2: #a95b1c;
+    --accent-soft: #f7e3cc;
+    --ok: #2f8a4f;
+    --err: #c0392b;
+    --shadow: 0 1px 2px rgba(60, 35, 15, .06), 0 8px 24px rgba(60, 35, 15, .08);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17110d;
+      --bg-2: #211812;
+      --card: #251b15;
+      --text: #f5e9db;
+      --muted: #b49c86;
+      --line: #3b2c21;
+      --accent: #e39349;
+      --accent-2: #f0a865;
+      --accent-soft: #3a2616;
+      --ok: #5cc27e;
+      --err: #ef6f61;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17110d;
+    --bg-2: #211812;
+    --card: #251b15;
+    --text: #f5e9db;
+    --muted: #b49c86;
+    --line: #3b2c21;
+    --accent: #e39349;
+    --accent-2: #f0a865;
+    --accent-soft: #3a2616;
+    --ok: #5cc27e;
+    --err: #ef6f61;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  header svg { width: 64px; height: 64px; flex: none; filter: drop-shadow(0 3px 6px rgba(0,0,0,.15)); }
+  h1 { font-size: 30px; line-height: 1; margin: 0; letter-spacing: .5px; font-weight: 800; }
+  h1 span { color: var(--accent); }
+  .tagline { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .theme-btn {
+    margin-left: auto; background: var(--card); color: var(--text); border: 1px solid var(--line);
+    border-radius: 999px; width: 40px; height: 40px; cursor: pointer; flex: none;
+    display: grid; place-items: center; padding: 0;
+  }
+  .theme-btn svg { width: 20px; height: 20px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+
+  .drop {
+    display: block;
+    border: 2px dashed var(--line); border-radius: 14px; padding: 32px 16px; text-align: center;
+    background: var(--bg-2); cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { display: block; font-size: 18px; margin-bottom: 4px; }
+  .drop small { color: var(--muted); }
+  .drop input { display: none; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--bg-2); color: var(--text); border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; font: inherit; font-size: 14px;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+  select {
+    font: inherit; font-size: 15px; color: var(--text); background: var(--bg-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%;
+  }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 14px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+  .btn {
+    font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer;
+    background: var(--accent); color: #fff; transition: background .15s, opacity .15s;
+  }
+  .btn:hover { background: var(--accent-2); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--bg-2); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+
+  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--bg-2);
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center;
+  }
+  .item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .item .meta { color: var(--muted); font-size: 13px; grid-column: 1 / -1; }
+  .item .meta b { color: var(--text); font-weight: 600; }
+  .item .meta .saving { color: var(--ok); font-weight: 600; }
+  .item .row-btns { display: flex; gap: 6px; align-items: center; }
+  .item .status { font-size: 13px; color: var(--muted); }
+  .item.error .status { color: var(--err); }
+  .item.done .status { color: var(--ok); }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .item audio { grid-column: 1 / -1; width: 100%; height: 36px; margin-top: 4px; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 8px 0; }
+
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 24px; }
+  footer a { color: inherit; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 24px; }
+    header svg { width: 52px; height: 52px; }
+    .item { grid-template-columns: 1fr; }
+    .item .row-btns { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg viewBox="0 0 128 128" role="img" aria-label="Cabeza de chihuahua">
+      <!-- Orejas -->
+      <path d="M30 62 L12 10 Q10 4 16 7 L58 34 Z" fill="#c98a4b"/>
+      <path d="M98 62 L116 10 Q118 4 112 7 L70 34 Z" fill="#c98a4b"/>
+      <path d="M32 52 L20 18 L50 37 Z" fill="#f2a7a0"/>
+      <path d="M96 52 L108 18 L78 37 Z" fill="#f2a7a0"/>
+      <!-- Cabeza -->
+      <ellipse cx="64" cy="70" rx="42" ry="38" fill="#d9a066"/>
+      <path d="M64 34 Q56 50 58 70 L70 70 Q72 50 64 34 Z" fill="#f6dcb5" opacity=".7"/>
+      <!-- Hocico -->
+      <ellipse cx="64" cy="92" rx="22" ry="16" fill="#f6dcb5"/>
+      <!-- Ojos -->
+      <circle cx="45" cy="66" r="11" fill="#2b1d14"/>
+      <circle cx="83" cy="66" r="11" fill="#2b1d14"/>
+      <circle cx="49" cy="62" r="3.5" fill="#fff"/>
+      <circle cx="87" cy="62" r="3.5" fill="#fff"/>
+      <!-- Nariz y boca -->
+      <path d="M57 84 Q64 79 71 84 Q68 91 64 91 Q60 91 57 84 Z" fill="#2b1d14"/>
+      <path d="M64 91 L64 96 M64 96 Q58 101 54 97 M64 96 Q70 101 74 97" stroke="#2b1d14" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M68 99 Q69 106 64 106 Q61 106 62 100" fill="#e66a7a"/>
+    </svg>
+    <div>
+      <h1>TOBY<span>MP3</span></h1>
+      <p class="tagline">Convierte cualquier audio a MP3 y comprímelo. 100% en tu navegador, sin subir nada.</p>
+    </div>
+    <button class="theme-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  </header>
+
+  <section class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" multiple accept="audio/*,video/*,.m4a,.mp3,.wav,.ogg,.oga,.opus,.flac,.aac,.webm,.mp4,.3gp,.amr,.caf,.aiff,.aif,.wma">
+      <strong>🐾 Arrastra tus audios aquí</strong>
+      <small>o haz clic para elegirlos · M4A, AAC, WAV, OGG, OPUS, FLAC, WEBM, MP4, MP3…</small>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>Calidad y compresión</h2>
+    <div class="presets" id="presets">
+      <button class="chip" data-preset="max">Máxima calidad</button>
+      <button class="chip active" data-preset="std">Estándar</button>
+      <button class="chip" data-preset="small">Comprimido</button>
+      <button class="chip" data-preset="voice">Notas de voz</button>
+      <button class="chip" data-preset="tiny">Mínimo tamaño</button>
+    </div>
+    <div class="grid">
+      <label class="field">Bitrate
+        <select id="bitrate">
+          <option value="320">320 kbps</option>
+          <option value="256">256 kbps</option>
+          <option value="192" selected>192 kbps</option>
+          <option value="160">160 kbps</option>
+          <option value="128">128 kbps</option>
+          <option value="96">96 kbps</option>
+          <option value="64">64 kbps</option>
+          <option value="48">48 kbps</option>
+          <option value="32">32 kbps</option>
+        </select>
+      </label>
+      <label class="field">Canales
+        <select id="channels">
+          <option value="auto">Igual que el original</option>
+          <option value="2">Estéreo</option>
+          <option value="1">Mono (la mitad de datos)</option>
+        </select>
+      </label>
+      <label class="field">Frecuencia de muestreo
+        <select id="samplerate">
+          <option value="auto">Igual que el original</option>
+          <option value="48000">48 000 Hz</option>
+          <option value="44100">44 100 Hz</option>
+          <option value="32000">32 000 Hz</option>
+          <option value="24000">24 000 Hz</option>
+          <option value="22050">22 050 Hz</option>
+          <option value="16000">16 000 Hz</option>
+          <option value="11025">11 025 Hz</option>
+        </select>
+      </label>
+    </div>
+    <label class="check"><input type="checkbox" id="normalize"> Normalizar volumen (subir audios bajitos)</label>
+    <p class="hint" id="estimate">Tamaño aproximado: ~1,4 MB por minuto.</p>
+  </section>
+
+  <section class="card">
+    <h2>Archivos</h2>
+    <ul class="list" id="list"><li class="empty">Aún no agregaste audios.</li></ul>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn" id="convertBtn" disabled>Convertir a MP3</button>
+      <button class="btn ghost" id="downloadAllBtn" disabled>Descargar todos</button>
+      <button class="btn ghost" id="clearBtn" disabled>Limpiar lista</button>
+    </div>
+  </section>
+
+  <footer>
+    TOBYMP3 funciona sin conexión: guarda este archivo y ábrelo con cualquier navegador moderno.<br>
+    Codificación MP3 con <a href="https://github.com/zhuker/lamejs" target="_blank" rel="noopener">lamejs</a> (LGPL), port de <a href="https://lame.sourceforge.io" target="_blank" rel="noopener">LAME</a>.
+  </footer>
+</div>
+
+<script type="text/plain" id="lamejs-src">/*__LAMEJS__*/</script>
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Tema ----------
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('tobymp3-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme')
+      ? root.getAttribute('data-theme') === 'dark'
+      : matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('tobymp3-theme', next); } catch (e) {}
+  });
+
+  // ---------- Ajustes ----------
+  var PRESETS = {
+    max:   { bitrate: 320, channels: 'auto', samplerate: 'auto' },
+    std:   { bitrate: 192, channels: 'auto', samplerate: 'auto' },
+    small: { bitrate: 128, channels: 'auto', samplerate: '44100' },
+    voice: { bitrate: 64,  channels: '1',    samplerate: '22050' },
+    tiny:  { bitrate: 32,  channels: '1',    samplerate: '16000' }
+  };
+  // Frecuencias que admite el codificador MP3
+  var MP3_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
+
+  var $bitrate = document.getElementById('bitrate');
+  var $channels = document.getElementById('channels');
+  var $samplerate = document.getElementById('samplerate');
+  var $normalize = document.getElementById('normalize');
+  var $estimate = document.getElementById('estimate');
+  var $presets = document.getElementById('presets');
+
+  function applyPreset(name) {
+    var p = PRESETS[name];
+    $bitrate.value = String(p.bitrate);
+    $channels.value = p.channels;
+    $samplerate.value = p.samplerate;
+    markPreset(name);
+    updateEstimates();
+  }
+  function markPreset(name) {
+    Array.prototype.forEach.call($presets.children, function (c) {
+      c.classList.toggle('active', c.dataset.preset === name);
+    });
+  }
+  $presets.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-preset]');
+    if (b) applyPreset(b.dataset.preset);
+  });
+  [$bitrate, $channels, $samplerate].forEach(function (el) {
+    el.addEventListener('change', function () { markPreset(null); updateEstimates(); });
+  });
+
+  function settings() {
+    return {
+      bitrate: parseInt($bitrate.value, 10),
+      channels: $channels.value,
+      samplerate: $samplerate.value,
+      normalize: $normalize.checked
+    };
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(2).replace('.', ',') + ' MB';
+  }
+  function fmtTime(s) {
+    s = Math.round(s);
+    var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
+  }
+  function estimateBytes(seconds) { return Math.round(seconds * settings().bitrate * 1000 / 8); }
+
+  function updateEstimates() {
+    var perMin = estimateBytes(60);
+    $estimate.textContent = 'Tamaño aproximado: ~' + fmtSize(perMin) + ' por minuto de audio.';
+    items.forEach(function (it) { if (it.state !== 'done') renderItem(it); });
+  }
+
+  // ---------- Lista de archivos ----------
+  var items = [];
+  var nextId = 1;
+  var busy = false;
+  var $list = document.getElementById('list');
+  var $convertBtn = document.getElementById('convertBtn');
+  var $downloadAllBtn = document.getElementById('downloadAllBtn');
+  var $clearBtn = document.getElementById('clearBtn');
+  var $drop = document.getElementById('drop');
+  var $fileInput = document.getElementById('fileInput');
+
+  $fileInput.addEventListener('change', function () { addFiles($fileInput.files); $fileInput.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (t) {
+    $drop.addEventListener(t, function (e) { e.preventDefault(); $drop.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    $drop.addEventListener(t, function (e) { e.preventDefault(); $drop.classList.remove('over'); });
+  });
+  $drop.addEventListener('drop', function (e) { addFiles(e.dataTransfer.files); });
+  // Evitar que soltar fuera de la zona abra el archivo en el navegador
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  function addFiles(fileList) {
+    Array.prototype.forEach.call(fileList, function (f) {
+      var it = { id: nextId++, file: f, state: 'pending', progress: 0, duration: null, el: null, url: null, blob: null, msg: '' };
+      items.push(it);
+      probeDuration(it);
+    });
+    renderList();
+  }
+
+  // Lee la duración con un <audio> para poder estimar el tamaño antes de convertir
+  function probeDuration(it) {
+    var a = document.createElement('audio');
+    var u = URL.createObjectURL(it.file);
+    a.preload = 'metadata';
+    a.onloadedmetadata = function () {
+      if (isFinite(a.duration)) { it.duration = a.duration; renderItem(it); }
+      URL.revokeObjectURL(u);
+    };
+    a.onerror = function () { URL.revokeObjectURL(u); };
+    a.src = u;
+  }
+
+  function renderList() {
+    $list.innerHTML = '';
+    if (!items.length) {
+      $list.innerHTML = '<li class="empty">Aún no agregaste audios.</li>';
+    }
+    items.forEach(function (it) {
+      it.el = document.createElement('li');
+      $list.appendChild(it.el);
+      renderItem(it);
+    });
+    updateButtons();
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; });
+  }
+  function outName(name) { return name.replace(/\.[^./\\]+$/, '') + '.mp3'; }
+
+  function renderItem(it) {
+    if (!it.el) return;
+    var el = it.el;
+    el.className = 'item ' + it.state;
+    var meta = 'Original: <b>' + fmtSize(it.file.size) + '</b>';
+    if (it.duration) meta += ' · ' + fmtTime(it.duration);
+    if (it.state === 'done') {
+      var diff = 1 - it.blob.size / it.file.size;
+      meta += ' → MP3: <b>' + fmtSize(it.blob.size) + '</b>';
+      if (diff > 0.01) meta += ' <span class="saving">(−' + Math.round(diff * 100) + '%)</span>';
+    } else if (it.duration) {
+      meta += ' → MP3 estimado: <b>~' + fmtSize(estimateBytes(it.duration)) + '</b>';
+    }
+
+    var status = {
+      pending: 'En espera',
+      decoding: 'Leyendo audio…',
+      encoding: 'Convirtiendo… ' + Math.round(it.progress * 100) + '%',
+      done: '✓ Listo',
+      error: '✗ ' + it.msg
+    }[it.state];
+
+    var btns = '';
+    if (it.state === 'done') {
+      btns += '<button class="btn small" data-act="dl">Descargar</button>';
+    }
+    if (!busy || it.state === 'done' || it.state === 'error') {
+      btns += '<button class="btn ghost small" data-act="rm" title="Quitar">✕</button>';
+    }
+
+    el.innerHTML =
+      '<div class="name" title="' + esc(it.file.name) + '">' + esc(it.state === 'done' ? outName(it.file.name) : it.file.name) + '</div>' +
+      '<div class="row-btns"><span class="status">' + esc(status) + '</span>' + btns + '</div>' +
+      '<div class="meta">' + meta + '</div>' +
+      (it.state === 'decoding' || it.state === 'encoding' ? '<div class="bar"><i style="width:' + (it.progress * 100).toFixed(1) + '%"></i></div>' : '') +
+      (it.state === 'done' ? '<audio controls preload="none" src="' + it.url + '"></audio>' : '');
+
+    el.onclick = function (e) {
+      var b = e.target.closest('[data-act]');
+      if (!b) return;
+      if (b.dataset.act === 'dl') download(it);
+      if (b.dataset.act === 'rm') removeItem(it);
+    };
+  }
+
+  function removeItem(it) {
+    if (it.url) URL.revokeObjectURL(it.url);
+    items = items.filter(function (x) { return x !== it; });
+    renderList();
+  }
+
+  function updateButtons() {
+    var pending = items.some(function (it) { return it.state === 'pending' || it.state === 'error'; });
+    var done = items.some(function (it) { return it.state === 'done'; });
+    $convertBtn.disabled = busy || !pending;
+    $downloadAllBtn.disabled = busy || !done;
+    $clearBtn.disabled = busy || !items.length;
+    $convertBtn.textContent = busy ? 'Convirtiendo…' : 'Convertir a MP3';
+  }
+
+  $clearBtn.addEventListener('click', function () {
+    items.forEach(function (it) { if (it.url) URL.revokeObjectURL(it.url); });
+    items = [];
+    renderList();
+  });
+
+  function download(it) {
+    var a = document.createElement('a');
+    a.href = it.url;
+    a.download = outName(it.file.name);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  $downloadAllBtn.addEventListener('click', function () {
+    var done = items.filter(function (it) { return it.state === 'done'; });
+    // Pequeña pausa entre descargas para que el navegador no las bloquee
+    done.forEach(function (it, i) { setTimeout(function () { download(it); }, i * 400); });
+  });
+
+  // ---------- Conversión ----------
+  $convertBtn.addEventListener('click', async function () {
+    busy = true;
+    updateButtons();
+    var opts = settings();
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.state !== 'pending' && it.state !== 'error') continue;
+      try {
+        await convert(it, opts);
+      } catch (err) {
+        console.error(err);
+        it.state = 'error';
+        it.msg = err && err.userMessage ? err.userMessage : 'No se pudo leer este archivo';
+        renderItem(it);
+      }
+    }
+    busy = false;
+    items.forEach(renderItem);
+    updateButtons();
+  });
+
+  var decodeCtx = null;
+  function getDecodeCtx() {
+    if (!decodeCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { var e = new Error('no audio'); e.userMessage = 'Tu navegador no soporta Web Audio'; throw e; }
+      decodeCtx = new AC();
+    }
+    return decodeCtx;
+  }
+
+  function decode(arrayBuffer) {
+    var ctx = getDecodeCtx();
+    return new Promise(function (resolve, reject) {
+      // Forma con callbacks para compatibilidad con Safari antiguo
+      var p = ctx.decodeAudioData(arrayBuffer, resolve, function (e) {
+        var err = new Error('decode'); err.userMessage = 'Este navegador no puede leer este formato. Prueba con Chrome, Edge o Safari'; reject(err);
+      });
+      if (p && p.catch) p.catch(function () {});
+    });
+  }
+
+  function closestMp3Rate(rate) {
+    if (MP3_RATES.indexOf(rate) !== -1) return rate;
+    // Para frecuencias no admitidas (p. ej. 96 kHz) usamos la admitida más cercana por debajo, o 48 kHz
+    var best = 8000;
+    MP3_RATES.forEach(function (r) { if (r <= rate) best = r; });
+    return rate > 48000 ? 48000 : best;
+  }
+
+  async function resample(buffer, targetRate, targetChannels) {
+    if (buffer.sampleRate === targetRate && buffer.numberOfChannels === targetChannels) {
+      return buffer;
+    }
+    var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    var length = Math.ceil(buffer.duration * targetRate);
+    var off = new OAC(targetChannels, length, targetRate);
+    var src = off.createBufferSource();
+    src.buffer = buffer;
+    src.connect(off.destination);  // Web Audio mezcla estéreo→mono automáticamente
+    src.start(0);
+    return await off.startRendering();
+  }
+
+  async function convert(it, opts) {
+    it.state = 'decoding';
+    it.progress = 0;
+    renderItem(it);
+
+    var data = await it.file.arrayBuffer();
+    var buffer = await decode(data);
+    it.duration = buffer.duration;
+
+    var channels = opts.channels === 'auto' ? Math.min(buffer.numberOfChannels, 2) : parseInt(opts.channels, 10);
+    var rate = opts.samplerate === 'auto' ? closestMp3Rate(buffer.sampleRate) : parseInt(opts.samplerate, 10);
+    // En MPEG-2/2.5 (frecuencias bajas) el bitrate máximo es 160 kbps
+    var bitrate = opts.bitrate;
+    if (rate < 32000 && bitrate > 160) bitrate = 160;
+
+    var rendered = await resample(buffer, rate, channels);
+    var chans = [];
+    for (var c = 0; c < channels; c++) chans.push(rendered.getChannelData(c).slice());
+
+    if (opts.normalize) normalize(chans);
+
+    it.state = 'encoding';
+    renderItem(it);
+
+    var blob = await encodeMp3(chans, rate, bitrate, function (p) {
+      it.progress = p;
+      var bar = it.el && it.el.querySelector('.bar i');
+      var st = it.el && it.el.querySelector('.status');
+      if (bar) bar.style.width = (p * 100).toFixed(1) + '%';
+      if (st) st.textContent = 'Convirtiendo… ' + Math.round(p * 100) + '%';
+    });
+
+    it.blob = blob;
+    it.url = URL.createObjectURL(blob);
+    it.state = 'done';
+    renderItem(it);
+  }
+
+  function normalize(chans) {
+    var peak = 0;
+    chans.forEach(function (ch) {
+      for (var i = 0; i < ch.length; i++) { var v = Math.abs(ch[i]); if (v > peak) peak = v; }
+    });
+    if (peak < 1e-4) return;
+    var gain = 0.98 / peak;   // deja un pequeño margen para evitar saturación
+    if (gain <= 1.01) return;
+    chans.forEach(function (ch) { for (var i = 0; i < ch.length; i++) ch[i] *= gain; });
+  }
+
+  // ---------- Codificador MP3 (Web Worker con lamejs incrustado) ----------
+  var LAME_SRC = document.getElementById('lamejs-src').textContent;
+
+  var WORKER_SRC = [
+    LAME_SRC,
+    'self.onmessage = function (e) {',
+    '  if (e.data === "ping") { self.postMessage("pong"); return; }',
+    '  var d = e.data, chans = d.chans, n = chans[0].length, nc = chans.length;',
+    '  var enc = new lamejs.Mp3Encoder(nc, d.rate, d.bitrate);',
+    '  var out = [], BLOCK = 1152 * 20;',
+    '  var L = new Int16Array(BLOCK), R = new Int16Array(BLOCK);',
+    '  function toI16(src, dst, start, len) {',
+    '    for (var i = 0; i < len; i++) { var s = src[start + i]; s = s < -1 ? -1 : s > 1 ? 1 : s; dst[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }',
+    '  }',
+    '  var lastPost = 0;',
+    '  for (var i = 0; i < n; i += BLOCK) {',
+    '    var len = Math.min(BLOCK, n - i);',
+    '    toI16(chans[0], L, i, len);',
+    '    var l = len === BLOCK ? L : L.subarray(0, len), r;',
+    '    if (nc > 1) { toI16(chans[1], R, i, len); r = len === BLOCK ? R : R.subarray(0, len); }',
+    '    var buf = nc > 1 ? enc.encodeBuffer(l, r) : enc.encodeBuffer(l);',
+    '    if (buf.length) out.push(new Uint8Array(buf.buffer, buf.byteOffset, buf.length).slice());',
+    '    var now = Date.now();',
+    '    if (now - lastPost > 100) { lastPost = now; self.postMessage({ progress: i / n }); }',
+    '  }',
+    '  var end = enc.flush();',
+    '  if (end.length) out.push(new Uint8Array(end.buffer, end.byteOffset, end.length).slice());',
+    '  self.postMessage({ done: true, parts: out }, out.map(function (p) { return p.buffer; }));',
+    '};'
+  ].join('\n');
+
+  var workerUrl = null;
+  var workerSupport = null;  // Promise<boolean>, se comprueba una sola vez
+  function makeWorker() {
+    try {
+      if (!workerUrl) workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+      return new Worker(workerUrl);
+    } catch (e) {
+      return null;
+    }
+  }
+  // Algunos navegadores bloquean workers al abrir el archivo con file://; lo probamos antes de usarlo
+  function checkWorker() {
+    if (workerSupport) return workerSupport;
+    workerSupport = new Promise(function (resolve) {
+      var w = makeWorker();
+      if (!w) return resolve(false);
+      var t = setTimeout(function () { w.terminate(); resolve(false); }, 5000);
+      w.onmessage = function (e) { if (e.data === 'pong') { clearTimeout(t); w.terminate(); resolve(true); } };
+      w.onerror = function (e) { e.preventDefault(); clearTimeout(t); w.terminate(); resolve(false); };
+      w.postMessage('ping');
+    });
+    return workerSupport;
+  }
+
+  async function encodeMp3(chans, rate, bitrate, onProgress) {
+    if (!(await checkWorker())) return encodeMainThread(chans, rate, bitrate, onProgress);
+    var worker = makeWorker();
+    return new Promise(function (resolve, reject) {
+      worker.onmessage = function (e) {
+        if (e.data.progress != null) onProgress(e.data.progress);
+        if (e.data.done) {
+          onProgress(1);
+          worker.terminate();
+          resolve(new Blob(e.data.parts, { type: 'audio/mpeg' }));
+        }
+      };
+      worker.onerror = function (e) {
+        e.preventDefault();
+        worker.terminate();
+        var err = new Error('encode'); err.userMessage = 'Error al codificar el MP3'; reject(err);
+      };
+      worker.postMessage({ chans: chans, rate: rate, bitrate: bitrate }, chans.map(function (c) { return c.buffer; }));
+    });
+  }
+
+  // Alternativa sin worker: procesa por tramos cediendo el control para no congelar la página
+  var mainLame = null;
+  function encodeMainThread(chans, rate, bitrate, onProgress) {
+    if (!mainLame) { (0, eval)(LAME_SRC); mainLame = window.lamejs; }
+    return new Promise(function (resolve) {
+      var n = chans[0].length, nc = chans.length;
+      var enc = new mainLame.Mp3Encoder(nc, rate, bitrate);
+      var out = [], BLOCK = 1152 * 20, i = 0;
+      var L = new Int16Array(BLOCK), R = new Int16Array(BLOCK);
+      function toI16(src, dst, start, len) {
+        for (var k = 0; k < len; k++) { var s = src[start + k]; s = s < -1 ? -1 : s > 1 ? 1 : s; dst[k] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+      }
+      function step() {
+        var t0 = performance.now();
+        while (i < n && performance.now() - t0 < 30) {
+          var len = Math.min(BLOCK, n - i);
+          toI16(chans[0], L, i, len);
+          var l = len === BLOCK ? L : L.subarray(0, len), r;
+          if (nc > 1) { toI16(chans[1], R, i, len); r = len === BLOCK ? R : R.subarray(0, len); }
+          var buf = nc > 1 ? enc.encodeBuffer(l, r) : enc.encodeBuffer(l);
+          if (buf.length) out.push(new Uint8Array(buf.buffer, buf.byteOffset, buf.length).slice());
+          i += len;
+        }
+        onProgress(i / n);
+        if (i < n) { setTimeout(step, 0); return; }
+        var end = enc.flush();
+        if (end.length) out.push(new Uint8Array(end.buffer, end.byteOffset, end.length).slice());
+        resolve(new Blob(out, { type: 'audio/mpeg' }));
+      }
+      step();
+    });
+  }
+
+  applyPreset('std');
+})();
+</script>
+</body>
+</html>
