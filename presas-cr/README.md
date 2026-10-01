@@ -51,3 +51,8 @@ Huecos (frenan y quitan el combo), zaguate cruzando, "¡Milagro! se abrió la pr
 ## Pruebas
 
 `index.html?m=1200` arranca la partida con 1200 m recorridos para probar fases avanzadas. `window.__presas` expone ganchos de depuración (`step`, `event(id)`, etc.).
+
+## Compartir
+
+- **En línea (GitHub Pages):** https://estebanperez4.github.io/Proyectos/presas-cr/ (cuando Pages esté activado en la rama `main`).
+- **Un solo archivo:** `presas-cr-un-archivo.html` trae todo el juego adentro (unos 94 KB). Se puede mandar por correo o WhatsApp y abrir en cualquier navegador sin internet.
