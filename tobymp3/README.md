@@ -1,20 +1,22 @@
 # 🐶 TOBYMP3
 
-Conversor portable de audio a MP3 con opción de compresión.
+Conversor portable de audio y video a MP3 con opción de compresión.
 
 **Uso:** descarga `TOBYMP3.html` y ábrelo con doble clic en Chrome, Edge, Firefox o Safari.
-No necesita instalación ni internet, y los audios nunca salen de tu equipo.
+No necesita instalación ni internet, y tus archivos nunca salen de tu equipo.
 
 ## Qué hace
 
-- Convierte M4A, AAC, WAV, OGG, OPUS, FLAC, WEBM, MP4 (pista de audio) y MP3 a **MP3**.
+- Convierte audio (M4A, AAC, WAV, OGG, OPUS, FLAC, MP3…) a **MP3**.
+- Extrae el sonido de **videos** (MP4, MOV, WEBM, MKV…) y lo guarda como MP3.
 - Varios archivos a la vez (arrastrar y soltar o seleccionar).
 - **Compresión** con presets (Máxima calidad, Estándar, Comprimido, Notas de voz, Mínimo tamaño)
   o ajuste manual de bitrate (32–320 kbps), canales (estéreo/mono) y frecuencia de muestreo.
 - Estimación del tamaño final antes de convertir y % de ahorro al terminar.
 - Normalización de volumen opcional, vista previa y descarga individual o de todos.
 
-Los formatos que puede leer dependen del navegador (M4A/AAC funciona en Chrome, Edge, Safari y Firefox).
+Los formatos que puede leer dependen del navegador (M4A/AAC funciona en Chrome, Edge, Safari y Firefox; MOV funciona mejor en Safari y Chrome; MKV en Chrome, Edge y Firefox).
+Los videos se cargan completos en memoria, así que los muy grandes (varios GB) pueden fallar.
 
 ## Desarrollo
 

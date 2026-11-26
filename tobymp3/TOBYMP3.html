@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TOBYMP3</title>
-<meta name="description" content="TOBYMP3 — conversor portable de audio a MP3 con compresión. Todo ocurre en tu navegador, sin subir archivos.">
+<meta name="description" content="TOBYMP3 — conversor portable de audio y video a MP3 con compresión. Todo ocurre en tu navegador, sin subir archivos.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cpath d='M30 62 L12 10 Q10 4 16 7 L58 34 Z' fill='%23c98a4b'/%3E%3Cpath d='M98 62 L116 10 Q118 4 112 7 L70 34 Z' fill='%23c98a4b'/%3E%3Cpath d='M32 52 L20 18 L50 37 Z' fill='%23f2a7a0'/%3E%3Cpath d='M96 52 L108 18 L78 37 Z' fill='%23f2a7a0'/%3E%3Cellipse cx='64' cy='70' rx='42' ry='38' fill='%23d9a066'/%3E%3Cellipse cx='64' cy='92' rx='22' ry='16' fill='%23f6dcb5'/%3E%3Ccircle cx='45' cy='66' r='11' fill='%232b1d14'/%3E%3Ccircle cx='83' cy='66' r='11' fill='%232b1d14'/%3E%3Ccircle cx='49' cy='62' r='3.5' fill='%23fff'/%3E%3Ccircle cx='87' cy='62' r='3.5' fill='%23fff'/%3E%3Cpath d='M57 84 Q64 79 71 84 Q68 91 64 91 Q60 91 57 84 Z' fill='%232b1d14'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -130,9 +130,11 @@
   .item .meta { color: var(--muted); font-size: 13px; grid-column: 1 / -1; }
   .item .meta b { color: var(--text); font-weight: 600; }
   .item .meta .saving { color: var(--ok); font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .3px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-2); margin-right: 6px; vertical-align: 1px; }
   .item .row-btns { display: flex; gap: 6px; align-items: center; }
   .item .status { font-size: 13px; color: var(--muted); }
   .item.error .status { color: var(--err); }
+  .item .errmsg { color: var(--err); }
   .item.done .status { color: var(--ok); }
   .bar { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
   .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
@@ -176,16 +178,16 @@
     </svg>
     <div>
       <h1>TOBY<span>MP3</span></h1>
-      <p class="tagline">Convierte cualquier audio a MP3 y comprímelo. 100% en tu navegador, sin subir nada.</p>
+      <p class="tagline">Convierte audios y videos a MP3 y comprímelos. 100% en tu navegador, sin subir nada.</p>
     </div>
     <button class="theme-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
   </header>
 
   <section class="card">
     <label class="drop" id="drop">
-      <input type="file" id="fileInput" multiple accept="audio/*,video/*,.m4a,.mp3,.wav,.ogg,.oga,.opus,.flac,.aac,.webm,.mp4,.3gp,.amr,.caf,.aiff,.aif,.wma">
-      <strong>🐾 Arrastra tus audios aquí</strong>
-      <small>o haz clic para elegirlos · M4A, AAC, WAV, OGG, OPUS, FLAC, WEBM, MP4, MP3…</small>
+      <input type="file" id="fileInput" multiple accept="audio/*,video/*,.m4a,.mp3,.wav,.ogg,.oga,.opus,.flac,.aac,.webm,.mp4,.3gp,.amr,.caf,.aiff,.aif,.wma,.mov,.m4v,.mkv,.avi,.wmv,.mpeg,.mpg,.ts">
+      <strong>🐾 Arrastra tus audios o videos aquí</strong>
+      <small>o haz clic para elegirlos · Audio: M4A, AAC, WAV, OGG, OPUS, FLAC, MP3… · Video: MP4, MOV, WEBM, MKV… (se extrae solo el sonido)</small>
     </label>
   </section>
 
@@ -238,7 +240,7 @@
 
   <section class="card">
     <h2>Archivos</h2>
-    <ul class="list" id="list"><li class="empty">Aún no agregaste audios.</li></ul>
+    <ul class="list" id="list"><li class="empty">Aún no agregaste archivos.</li></ul>
     <div class="actions" style="margin-top:14px">
       <button class="btn" id="convertBtn" disabled>Convertir a MP3</button>
       <button class="btn ghost" id="downloadAllBtn" disabled>Descargar todos</button>
@@ -690,7 +692,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   function renderList() {
     $list.innerHTML = '';
     if (!items.length) {
-      $list.innerHTML = '<li class="empty">Aún no agregaste audios.</li>';
+      $list.innerHTML = '<li class="empty">Aún no agregaste archivos.</li>';
     }
     items.forEach(function (it) {
       it.el = document.createElement('li');
@@ -703,13 +705,19 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; });
   }
+  var VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv|avi|wmv|mpe?g|ts|3gp|flv)$/i;
+  function isVideo(file) {
+    return /^video\//.test(file.type) || VIDEO_EXT.test(file.name);
+  }
+  var BIG_VIDEO = 700 * 1024 * 1024;
+
   function outName(name) { return name.replace(/\.[^./\\]+$/, '') + '.mp3'; }
 
   function renderItem(it) {
     if (!it.el) return;
     var el = it.el;
     el.className = 'item ' + it.state;
-    var meta = 'Original: <b>' + fmtSize(it.file.size) + '</b>';
+    var meta = (isVideo(it.file) ? '<span class="tag">🎬 VIDEO → solo audio</span>' : '') + 'Original: <b>' + fmtSize(it.file.size) + '</b>';
     if (it.duration) meta += ' · ' + fmtTime(it.duration);
     if (it.state === 'done') {
       var diff = 1 - it.blob.size / it.file.size;
@@ -718,13 +726,17 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     } else if (it.duration) {
       meta += ' → MP3 estimado: <b>~' + fmtSize(estimateBytes(it.duration)) + '</b>';
     }
+    if (it.state === 'error') meta += '<br><span class="errmsg">' + esc(it.msg) + '</span>';
+    if (it.state !== 'done' && isVideo(it.file) && it.file.size > BIG_VIDEO) {
+      meta += '<br>Video grande: puede tardar y necesitar mucha memoria del navegador.';
+    }
 
     var status = {
       pending: 'En espera',
       decoding: 'Leyendo audio…',
       encoding: 'Convirtiendo… ' + Math.round(it.progress * 100) + '%',
       done: '✓ Listo',
-      error: '✗ ' + it.msg
+      error: '✗ No se pudo convertir'
     }[it.state];
 
     var btns = '';
@@ -817,12 +829,16 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     return decodeCtx;
   }
 
-  function decode(arrayBuffer) {
+  function decode(arrayBuffer, video) {
     var ctx = getDecodeCtx();
     return new Promise(function (resolve, reject) {
       // Forma con callbacks para compatibilidad con Safari antiguo
       var p = ctx.decodeAudioData(arrayBuffer, resolve, function (e) {
-        var err = new Error('decode'); err.userMessage = 'Este navegador no puede leer este formato. Prueba con Chrome, Edge o Safari'; reject(err);
+        var err = new Error('decode');
+        err.userMessage = video
+          ? 'No se encontró sonido en este video o el navegador no puede leer su formato. Prueba con Chrome, Edge o Safari'
+          : 'Este navegador no puede leer este formato. Prueba con Chrome, Edge o Safari';
+        reject(err);
       });
       if (p && p.catch) p.catch(function () {});
     });
@@ -855,8 +871,14 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
     it.progress = 0;
     renderItem(it);
 
-    var data = await it.file.arrayBuffer();
-    var buffer = await decode(data);
+    var data;
+    try {
+      data = await it.file.arrayBuffer();
+    } catch (e) {
+      var err = new Error('read'); err.userMessage = 'El archivo es demasiado grande para la memoria del navegador'; throw err;
+    }
+    var buffer = await decode(data, isVideo(it.file));
+    data = null;
     it.duration = buffer.duration;
 
     var channels = opts.channels === 'auto' ? Math.min(buffer.numberOfChannels, 2) : parseInt(opts.channels, 10);
