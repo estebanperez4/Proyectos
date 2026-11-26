@@ -8,12 +8,14 @@ Abrí `index.html` en cualquier navegador moderno. No necesita servidor ni insta
 
 | Acción | Teclado | Táctil |
 |---|---|---|
-| Cambiar de carril | ← → / A D | botones ◀ ▶, deslizar o tocar mitad izq/der |
-| Meterle | ↑ / W | ▲ (mantener) |
-| Frenar | ↓ / S | ▼ (mantener) |
+| Cambiar de carril | ← → / A D | deslizar ← → con un dedo (se puede encadenar), o tocar mitad izq/der |
+| Meterle | ↑ / W | mantener el dedo arriba del punto donde tocaste |
+| Frenar | ↓ / S | mantener el dedo abajo del punto donde tocaste |
 | Pausa | P / Esc | botón II |
 | Sonido | M | — |
 | Música | N | botón en la pausa |
+
+En celular el modo por defecto es con un solo dedo. En la pausa se puede cambiar a botones en pantalla (◀ ▶ ▲ ▼).
 
 ## Música
 

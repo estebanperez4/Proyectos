@@ -58,6 +58,8 @@ html, body {
   box-shadow: 0 8px 0 #b38f00, 0 14px 30px rgba(0, 0, 0, .5);
 }
 .panel.small { width: 320px; }
+.panel.small .ghost { display: block; margin: 8px auto 0; }
+.panel.small .ghost[hidden] { display: none; }
 
 .logo {
   margin: 4px 0 6px;

@@ -1721,13 +1721,29 @@
       drawFx();
     }
     ctx.restore();
-    if (G && state !== 'title') { drawHUD(); drawBanner(); }
+    if (G && state !== 'title') { drawHUD(); drawBanner(); drawTouchHint(); }
+    if (window.__drawSwipe) window.__drawSwipe();
+  }
+
+  // pista de controles al empezar, solo en pantallas táctiles
+  let touchHintT = 0;
+  function drawTouchHint() {
+    if (touchHintT <= 0 || state !== 'playing') return;
+    const a = Math.min(1, touchHintT / 0.5);
+    ctx.globalAlpha = a;
+    const y = 400;
+    ctx.fillStyle = 'rgba(8,16,28,.78)'; rr(40, y, W - 80, 86, 14); ctx.fill();
+    txt('UN SOLO DEDO', W / 2, y + 20, 13, '#ffcc00', 'center', false);
+    txt('Deslizá ← → para cambiar de carril', W / 2, y + 44, 14, '#fff', 'center', false);
+    txt('Arriba = meterle · Abajo = frenar', W / 2, y + 67, 14, '#fff', 'center', false);
+    ctx.globalAlpha = 1;
   }
 
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    if (touchHintT > 0 && state === 'playing') touchHintT -= dt;
     update(dt);
     render();
     requestAnimationFrame(frame);
@@ -1747,6 +1763,10 @@
     showOverlay(null);
     $('pauseBtn').classList.add('show');
     input.up = input.down = false;
+    if (isTouch && touchMode === 'swipe') {
+      const n = store.get('presascr_hints', 0);
+      if (n < 3) { touchHintT = 5; store.set('presascr_hints', n + 1); }
+    }
   }
   function togglePause() {
     if (state === 'playing') { state = 'paused'; showOverlay('pause'); Music.stop(0.2); }
@@ -1819,9 +1839,23 @@
 
   // táctil: botones
   const touchEl = $('touch');
-  function enableTouch() { touchEl.classList.add('show'); }
+  const ctrlBtn = $('ctrlBtn');
+  let isTouch = false;
+  let touchMode = store.get('presascr_touch', 'swipe');           // 'swipe' (un dedo) o 'buttons'
+  function syncTouchUI() {
+    touchEl.classList.toggle('show', isTouch && touchMode === 'buttons');
+    ctrlBtn.hidden = !isTouch;
+    ctrlBtn.textContent = `Controles: ${touchMode === 'swipe' ? 'deslizar con un dedo' : 'botones'}`;
+  }
+  function enableTouch() { isTouch = true; syncTouchUI(); }
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) enableTouch();
   window.addEventListener('touchstart', enableTouch, { once: true, passive: true });
+  ctrlBtn.addEventListener('click', () => {
+    touchMode = touchMode === 'swipe' ? 'buttons' : 'swipe';
+    store.set('presascr_touch', touchMode);
+    syncTouchUI();
+  });
+  syncTouchUI();
   touchEl.querySelectorAll('button').forEach(btn => {
     const act = btn.dataset.act;
     const down = ev => {
@@ -1841,22 +1875,62 @@
     btn.addEventListener('pointercancel', up);
     btn.addEventListener('pointerleave', up);
   });
-  // táctil: deslizar en el canvas (izq/der = carril, tocar mitad izq/der también)
+  // táctil con un dedo, sobre toda la pantalla:
+  //   deslizar ← → cambia de carril (cada ~30 px un carril; se puede encadenar sin soltar)
+  //   mantener el dedo arriba del punto donde tocaste = meterle; abajo = frenar; soltar = velocidad normal
+  //   un toque rápido en la mitad izquierda/derecha también cambia de carril
+  const SWIPE_X = 30, SWIPE_Y = 24;
   let sw = null;
-  canvas.addEventListener('pointerdown', e => { sw = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false }; });
-  canvas.addEventListener('pointermove', e => {
-    if (!sw) return;
-    const dx = e.clientX - sw.x;
-    if (Math.abs(dx) > 35) { moveLane(dx > 0 ? 1 : -1); sw.x = e.clientX; sw.moved = true; }
+  function toGame(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+  }
+  canvas.addEventListener('pointerdown', e => {
+    if (sw) return;                                                // solo un dedo manda
+    Sound.init();
+    sw = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, t: performance.now(), moved: false, g0: toGame(e), g: toGame(e) };
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
   });
-  canvas.addEventListener('pointerup', e => {
-    if (!sw) return;
-    if (!sw.moved && performance.now() - sw.t < 250 && e.pointerType !== 'mouse') {
+  canvas.addEventListener('pointermove', e => {
+    if (!sw || e.pointerId !== sw.id) return;
+    sw.g = toGame(e);
+    const dx = e.clientX - sw.x;
+    if (Math.abs(dx) > SWIPE_X) {
+      moveLane(dx > 0 ? 1 : -1);
+      sw.x += Math.sign(dx) * SWIPE_X;
+      sw.moved = true;
+    }
+    if (e.pointerType === 'mouse') return;
+    const dy = e.clientY - sw.y0;
+    input.up = dy < -SWIPE_Y;
+    input.down = dy > SWIPE_Y;
+    if (Math.abs(dy) > SWIPE_Y) sw.moved = true;
+  });
+  function endSwipe(e) {
+    if (!sw || e.pointerId !== sw.id) return;
+    if (e.type === 'pointerup' && !sw.moved && performance.now() - sw.t < 250 && e.pointerType !== 'mouse') {
       const r = canvas.getBoundingClientRect();
       moveLane(e.clientX < r.left + r.width / 2 ? -1 : 1);
     }
+    if (e.pointerType !== 'mouse') input.up = input.down = false;
     sw = null;
-  });
+  }
+  canvas.addEventListener('pointerup', endSwipe);
+  canvas.addEventListener('pointercancel', endSwipe);
+
+  // guía visual del gesto mientras el dedo está en la pantalla
+  function drawSwipe() {
+    if (!sw || state !== 'playing') return;
+    const { g0, g } = sw;
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(g0.x, g0.y, 26, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.75;
+    circle(g.x, g.y, 12, input.up ? '#3bff8a' : input.down ? '#ff3b3b' : '#ffffff');
+    ctx.restore();
+  }
+  window.__drawSwipe = drawSwipe;
 
   // =================================================================
   //  ARRANQUE
