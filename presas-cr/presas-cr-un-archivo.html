@@ -269,7 +269,7 @@ button.ghost {
               <li><b>↑</b> / <b>W</b> meterle</li>
               <li><b>↓</b> / <b>S</b> frenar</li>
               <li><b>P</b> pausa · <b>M</b> sonido · <b>N</b> música</li>
-              <li>Celular: un dedo, deslizá ← → y arriba/abajo</li>
+              <li>Celular: tocá un lado para cambiar de carril; mantené y deslizá ↑↓ para la velocidad</li>
             </ul>
           </div>
           <div class="box">
@@ -297,7 +297,7 @@ button.ghost {
         <p class="tag">La presa te espera…</p>
         <button class="big" data-resume>SEGUIR</button>
         <button class="ghost" id="musicBtn">Música: sí</button>
-        <button class="ghost" id="ctrlBtn" hidden>Controles: deslizar con un dedo</button>
+        <button class="ghost" id="ctrlBtn" hidden>Controles: toques</button>
         <button class="ghost" data-quit>Salir al menú</button>
       </div>
     </div>
@@ -2052,9 +2052,9 @@ button.ghost {
     ctx.globalAlpha = a;
     const y = 400;
     ctx.fillStyle = 'rgba(8,16,28,.78)'; rr(40, y, W - 80, 86, 14); ctx.fill();
-    txt('UN SOLO DEDO', W / 2, y + 20, 13, '#ffcc00', 'center', false);
-    txt('Deslizá ← → para cambiar de carril', W / 2, y + 44, 14, '#fff', 'center', false);
-    txt('Arriba = meterle · Abajo = frenar', W / 2, y + 67, 14, '#fff', 'center', false);
+    txt('CONTROLES', W / 2, y + 20, 13, '#ffcc00', 'center', false);
+    txt('Tocá un lado = un carril (2 toques = 2)', W / 2, y + 44, 14, '#fff', 'center', false);
+    txt('Mantené y deslizá ↑ meterle · ↓ frenar', W / 2, y + 67, 14, '#fff', 'center', false);
     ctx.globalAlpha = 1;
   }
 
@@ -2083,8 +2083,8 @@ button.ghost {
     $('pauseBtn').classList.add('show');
     input.up = input.down = false;
     if (isTouch && touchMode === 'swipe') {
-      const n = store.get('presascr_hints', 0);
-      if (n < 3) { touchHintT = 5; store.set('presascr_hints', n + 1); }
+      const n = store.get('presascr_hints2', 0);
+      if (n < 3) { touchHintT = 5; store.set('presascr_hints2', n + 1); }
     }
   }
   function togglePause() {
@@ -2164,7 +2164,7 @@ button.ghost {
   function syncTouchUI() {
     touchEl.classList.toggle('show', isTouch && touchMode === 'buttons');
     ctrlBtn.hidden = !isTouch;
-    ctrlBtn.textContent = `Controles: ${touchMode === 'swipe' ? 'deslizar con un dedo' : 'botones'}`;
+    ctrlBtn.textContent = `Controles: ${touchMode === 'swipe' ? 'toques' : 'botones'}`;
   }
   function enableTouch() { isTouch = true; syncTouchUI(); }
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) enableTouch();
@@ -2194,59 +2194,73 @@ button.ghost {
     btn.addEventListener('pointercancel', up);
     btn.addEventListener('pointerleave', up);
   });
-  // táctil con un dedo, sobre toda la pantalla:
-  //   deslizar ← → cambia de carril (cada ~30 px un carril; se puede encadenar sin soltar)
-  //   mantener el dedo arriba del punto donde tocaste = meterle; abajo = frenar; soltar = velocidad normal
-  //   un toque rápido en la mitad izquierda/derecha también cambia de carril
-  const SWIPE_X = 30, SWIPE_Y = 24;
-  let sw = null;
+  // táctil:
+  //   tocar la mitad derecha/izquierda = un carril para ese lado (dos toques = dos carriles)
+  //   mantener el dedo y deslizarlo arriba = meterle; abajo = frenar; soltar = velocidad normal
+  //   deslizar de lado no hace nada, para evitar cambios de carril sin querer
+  //   con dos dedos: uno puede quedarse acelerando mientras el otro toca para cambiar de carril
+  const SWIPE_Y = 24, TAP_MS = 320;
+  const touches = new Map();
+  let speedId = null;                                              // el dedo que controla la velocidad
+  let tapFx = [];
   function toGame(e) {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
   }
   canvas.addEventListener('pointerdown', e => {
-    if (sw) return;                                                // solo un dedo manda
     Sound.init();
-    sw = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, t: performance.now(), moved: false, g0: toGame(e), g: toGame(e) };
+    touches.set(e.pointerId, { y0: e.clientY, t: performance.now(), vert: false, g0: toGame(e), g: toGame(e) });
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
   });
   canvas.addEventListener('pointermove', e => {
-    if (!sw || e.pointerId !== sw.id) return;
-    sw.g = toGame(e);
-    const dx = e.clientX - sw.x;
-    if (Math.abs(dx) > SWIPE_X) {
-      moveLane(dx > 0 ? 1 : -1);
-      sw.x += Math.sign(dx) * SWIPE_X;
-      sw.moved = true;
+    const tc = touches.get(e.pointerId);
+    if (!tc || e.pointerType === 'mouse') return;
+    tc.g = toGame(e);
+    const dy = e.clientY - tc.y0;
+    if (Math.abs(dy) > SWIPE_Y && (speedId === null || speedId === e.pointerId)) {
+      tc.vert = true; speedId = e.pointerId;
     }
-    if (e.pointerType === 'mouse') return;
-    const dy = e.clientY - sw.y0;
-    input.up = dy < -SWIPE_Y;
-    input.down = dy > SWIPE_Y;
-    if (Math.abs(dy) > SWIPE_Y) sw.moved = true;
+    if (speedId === e.pointerId) { input.up = dy < -SWIPE_Y; input.down = dy > SWIPE_Y; }
   });
-  function endSwipe(e) {
-    if (!sw || e.pointerId !== sw.id) return;
-    if (e.type === 'pointerup' && !sw.moved && performance.now() - sw.t < 250 && e.pointerType !== 'mouse') {
-      const r = canvas.getBoundingClientRect();
-      moveLane(e.clientX < r.left + r.width / 2 ? -1 : 1);
-    }
-    if (e.pointerType !== 'mouse') input.up = input.down = false;
-    sw = null;
+  function endTouch(e) {
+    const tc = touches.get(e.pointerId);
+    if (!tc) return;
+    touches.delete(e.pointerId);
+    if (speedId === e.pointerId) { speedId = null; input.up = input.down = false; }
+    if (e.type !== 'pointerup' || tc.vert || performance.now() - tc.t > TAP_MS) return;
+    const r = canvas.getBoundingClientRect();
+    const d = e.clientX < r.left + r.width / 2 ? -1 : 1;
+    moveLane(d);
+    if (state === 'playing') tapFx.push({ d, t: 0 });
   }
-  canvas.addEventListener('pointerup', endSwipe);
-  canvas.addEventListener('pointercancel', endSwipe);
+  canvas.addEventListener('pointerup', endTouch);
+  canvas.addEventListener('pointercancel', endTouch);
 
-  // guía visual del gesto mientras el dedo está en la pantalla
+  // respuesta visual: flecha en el lado tocado y guía mientras se controla la velocidad
   function drawSwipe() {
-    if (!sw || state !== 'playing') return;
-    const { g0, g } = sw;
+    if (state !== 'playing') { tapFx = []; return; }
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(g0.x, g0.y, 26, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 0.75;
-    circle(g.x, g.y, 12, input.up ? '#3bff8a' : input.down ? '#ff3b3b' : '#ffffff');
+    for (const f of tapFx) {
+      f.t += 1 / 60;
+      const a = Math.max(0, 1 - f.t / 0.3);
+      const x = f.d > 0 ? W - 46 : 46;
+      ctx.globalAlpha = a * 0.7;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x + f.d * 18, PLAYER_Y + 40);
+      ctx.lineTo(x - f.d * 10, PLAYER_Y + 14);
+      ctx.lineTo(x - f.d * 10, PLAYER_Y + 66);
+      ctx.closePath(); ctx.fill();
+    }
+    tapFx = tapFx.filter(f => f.t < 0.3);
+    const tc = speedId !== null && touches.get(speedId);
+    if (tc) {
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(tc.g0.x, tc.g0.y, 26, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.75;
+      circle(tc.g0.x, tc.g.y, 12, input.up ? '#3bff8a' : input.down ? '#ff3b3b' : '#ffffff');
+    }
     ctx.restore();
   }
   window.__drawSwipe = drawSwipe;
